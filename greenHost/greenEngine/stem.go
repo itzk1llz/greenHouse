@@ -6,6 +6,10 @@ type Stem struct {
 	Stem_id       string
 }
 
+type StemVal struct {
+	Stem_val string
+}
+
 func validateStem(stem Stem) uint8 {
 	stemTypes := []string{"thermohum", "light"} // available stem types for now
 

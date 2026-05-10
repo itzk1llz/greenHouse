@@ -1,23 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import '../models/stem.dart';
 
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-class Stem {
-  String stem_name;
-  String stem_function;
-  String stem_id;
-
-  Stem({
-    required this.stem_name,
-    required this.stem_function,
-    required this.stem_id,
-  });
-
-
-
-
-}
 
 class StemList extends StatefulWidget {
   const StemList({super.key});
@@ -27,31 +14,32 @@ class StemList extends StatefulWidget {
 }
 
 class _StemListState extends State<StemList> {
-
-  Future<List<Stem>> fetchStem() async {
-    final response = await http.get(Uri.parse('http://192.168.0.113:8080/getstemlist'));
-
-    var responseData = json.decode(response.body);
-
-    List<Stem> stemlist = [];
-
-    for(var onestem in responseData) {
-      Stem stem = Stem (
-        stem_name: onestem["Stem_name"],
-        stem_function: onestem["Stem_function"],
-        stem_id: onestem["Stem_id"],
-      );
-      stemlist.add(stem);
+  static Future<void> removeStem(String stem_id) async {
+        try {
+            final response = await http.post(
+                Uri.parse("http://${dotenv.get("GH_ADDR")}:${dotenv.get("GH_PORT")}/removestem?stemid=$stem_id"),
+                headers: <String, String>{
+                    'Content-Type': 'application/json; charset=UTF-8',
+                },
+            );
+            
+            if (response.statusCode == 200) {
+                print("Done!");
+            } else {
+                print("Failed : ${response.statusCode}");
+            }
+        } catch (e) {
+            print("Error sending post reuqest: $e");
+        }
     }
 
-    return stemlist;
-  }
+  
   late Future<List<Stem>> futureStem;
 
   @override
   void initState(){
     super.initState();
-    futureStem = fetchStem();
+    futureStem = Stem.fetchStem();
   }
 
   @override
@@ -81,7 +69,7 @@ class _StemListState extends State<StemList> {
   Expanded stemList() {
     return Expanded(
                 child: FutureBuilder<List<Stem>>(
-                    future: fetchStem(),
+                    future: Stem.fetchStem(),
                     builder: (BuildContext ctx, AsyncSnapshot snapshot) {
                       if(snapshot.data == null) {
                         return Container (
@@ -133,6 +121,7 @@ class _StemListState extends State<StemList> {
                                               GestureDetector(
                                                 onTap: () {
                                                   print("Tapped X of " + snapshot.data[index].stem_name);
+                                                  removeStem(snapshot.data[index].stem_id);
                                                 },
                                                 child: Padding(
                                                   padding: const EdgeInsets.only(top: 5),
@@ -141,8 +130,12 @@ class _StemListState extends State<StemList> {
                                                     width: 20,
                                                     decoration: BoxDecoration(
                                                       color: Colors.red,
+                                                      borderRadius: BorderRadius.circular(5)
                                                     ),
-                                                    child: Text("  X"),
+                                                    child: Icon(
+                                                      Icons.delete,
+                                                      size: 16,
+                                                      ),
                                                   ),
                                                 ),
                                               ),

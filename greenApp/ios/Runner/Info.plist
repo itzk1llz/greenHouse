@@ -2,7 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>LSApplicationQueriesSchemes</key>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location in order for it to function properly.</string>
+    <key>UIBackgroundModes</key>
+	<array>
+	<string>location</string>
+	</array>
+	<key>LSApplicationQueriesSchemes</key>
     <array>
       <string>https</string>
       <string>http</string>

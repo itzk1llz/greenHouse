@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:green_app/pages/home.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future<void> main() async {
+  await dotenv.load();
   runApp(const MyApp());
 }
 
@@ -16,6 +18,9 @@ class MyApp extends StatelessWidget {
       title: 'greenApp',
       theme: ThemeData(
         fontFamily: "Outfit",
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Color(0xff6d9e32), 
+          ),
       ),
       home: HomePage(),
 
