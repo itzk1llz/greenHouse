@@ -25,20 +25,28 @@ class Stem extends StatefulWidget {
   static Future<List<Stem>> fetchStem() async {
     final response = await http.get(Uri.parse("http://${dotenv.get("GH_ADDR")}:${dotenv.get("GH_PORT")}/getstemlist"));
 
-    var responseData = json.decode(response.body);
-
-    List<Stem> stemlist = [];
-
-    for(var onestem in responseData) {
-      Stem stem = Stem (
-        stem_name: onestem["Stem_name"],
-        stem_function: onestem["Stem_function"],
-        stem_id: onestem["Stem_id"],
-      );
-      stemlist.add(stem);
+    if (response.body.isEmpty) {
+      return [];
     }
 
-    return stemlist;
+    try {
+      var responseData = json.decode(response.body);
+      List<Stem> stemlist = [];
+
+      for(var onestem in responseData) {
+        Stem stem = Stem (
+          stem_name: onestem["Stem_name"],
+          stem_function: onestem["Stem_function"],
+          stem_id: onestem["Stem_id"],
+        );
+        stemlist.add(stem);
+      }
+
+      return stemlist;
+    } catch (e) {
+      print("Error decoding JSON: $e");
+      return [];
+    }
   }
 
   static Widget stemType(AsyncSnapshot<List<Stem>> snapshot, int index) {
@@ -55,8 +63,16 @@ class Stem extends StatefulWidget {
         stem_name: stemData.stem_name,
         stem_function: stemData.stem_function,
         stem_id: stemData.stem_id,
-        snapshot: snapshot,  // Pass snapshot
-        index: index,        // Pass index
+        snapshot: snapshot,  
+        index: index,        
+      );
+    } else if(stemData.stem_function == "soilhum") {
+      return Stem(
+        stem_name: stemData.stem_name,
+        stem_function: stemData.stem_function,
+        stem_id: stemData.stem_id,
+        snapshot: snapshot,  
+        index: index,        
       );
     }
     return Container();  // Fallback
@@ -78,7 +94,7 @@ class Stem extends StatefulWidget {
 }
 
 class _StemState extends State<Stem> {
-  String button_state = "ON"; 
+  String button_state = "?"; 
   String temp_val = "?";
   String hum_val = "?";
   String rawVal = "";
@@ -102,6 +118,13 @@ class _StemState extends State<Stem> {
     super.dispose();
   }
 
+  static Future<void> toggleLight(String stem_id) async {
+    await http.post(
+      Uri.parse("http://${dotenv.get("GH_ADDR")}:${dotenv.get("GH_PORT")}/togglelight?stemid=${stem_id}"),
+      body: "",
+    );
+  }
+
   Future<void> fetchSensorData(String stem_id) async {
     try {
       String url = "http://${dotenv.get("GH_ADDR")}:${dotenv.get("GH_PORT")}/getstemval?stemid=$stem_id";
@@ -120,9 +143,14 @@ class _StemState extends State<Stem> {
             temp_val = parts[0] + "°C";
             hum_val = parts[1] + "%";
             print("Parsed - Temp: $temp_val, Humidity: $hum_val");
-          } else {
-            temp_val = rawVal;
-            hum_val = "-";
+          } else if(rawVal.contains("L")) {
+            List<String> parts = rawVal.split("L");
+            if(parts[0] == "0") {button_state = "OFF";}
+            else {button_state = "ON";}
+            
+          } else if(rawVal.contains("S")) {
+            List<String> parts = rawVal.split("S");
+            hum_val = parts[0]+"%";
           }
         });
       } else {
@@ -221,6 +249,7 @@ class _StemState extends State<Stem> {
                       setState(() {
                         button_state = button_state == "ON" ? "OFF" : "ON";
                       });
+                      toggleLight(widget.snapshot!.data![widget.index!].stem_id);
                     },
                     child: Container(
                       width: 50,
@@ -237,6 +266,63 @@ class _StemState extends State<Stem> {
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (widget.stem_function == "soilhum") {
+      // Build light container (stateful)
+      return Container(
+        width: 130,
+        height: 150,
+        decoration: BoxDecoration(
+          color: Color.fromARGB(255, 222, 222, 172),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.grass,
+                    size: 30,
+                  ),
+                  Text(
+                    widget.snapshot!.data![widget.index!].stem_name,  // Use passed snapshot/index
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Color.fromARGB(255, 222, 222, 172),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        hum_val,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),

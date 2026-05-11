@@ -102,6 +102,11 @@ func main() {
 		c.String(http.StatusOK, "")
 	})
 
+	r.POST("/togglelight", func(c *gin.Context) {
+		stem_id := c.Query("stemid")
+		mqtt_send_msg("/greenHostComm", stem_id)
+	})
+
 	r.POST("/sendnameupdate", func(c *gin.Context) {
 		var stem Stem
 		stem.Stem_id = c.Query("stemid")

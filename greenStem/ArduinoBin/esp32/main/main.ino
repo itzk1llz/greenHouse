@@ -12,7 +12,8 @@
 bool res;
 const String TAG = "gS: "; 
 
-const int sensorPin = 17;
+const int sensorPin = 14;
+const int resetPin = 7;
 String wifissid;
 String wifipass;
 String stem_id;
@@ -25,17 +26,47 @@ DHT dht(sensorPin, DHTTYPE);
 WiFiClient wificl;
 PubSubClient client(wificl);
 
+void toggle_light(int pin) {
+  if(digitalRead(pin) == HIGH) {
+    digitalWrite(pin, LOW);
+  } else {
+    digitalWrite(pin, HIGH);
+  }
+}
+void reset_nvs() {
+  NVS.setString("wifissid", "");
+          wifissid = NVS.getString("wifissid");
+          NVS.setString("wifipass", "");
+          wifipass = NVS.getString("wifipass");
+          NVS.setString("stem_id", "");
+          stem_id = NVS.getString("stem_id");
+          NVS.setString("mqtt_addr", "");
+          mqtt_addr = NVS.getString("mqtt_addr");
+          NVS.setString("ok", "NO");
+          ok = NVS.getString("ok");
+          NVS.setString("stemfunction", "");
+          stemfunction = NVS.getString("stemfunction");
+          WiFi.disconnect();
+          ESP.restart();
+}
+
+
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("gS: got message (");
   Serial.print(topic);
   Serial.print(") ");
+  String messageTemp;
   for (int i=0;i<length;i++) {
     Serial.print((char)payload[i]);
+    messageTemp += (char) payload[i];
   }
   Serial.println();
 
   if(String(topic) == "/greenHostComm") {
-    client.publish("/greenHouseComm", "Pong");
+    if(messageTemp==stem_id && stemfunction == "light") {
+      toggle_light(sensorPin);
+    }
+    
   }
 }
 
@@ -88,6 +119,8 @@ void kickstart() {
 
     if(stemfunction == "thermohum") {
       dht.begin();
+    } else if(stemfunction == "light") {
+      digitalWrite(sensorPin, LOW);
     }
     
   }
@@ -101,32 +134,22 @@ void reconnect() {
       client.subscribe("/greenHostComm");
       client.subscribe("/greenHouseComm");
     }
+    if(digitalRead(resetPin) == HIGH) {
+            reset_nvs();
+          }
     delay(2000);
   }
 }
 
-void reset_nvs() {
-  NVS.setString("wifissid", "");
-          wifissid = NVS.getString("wifissid");
-          NVS.setString("wifipass", "");
-          wifipass = NVS.getString("wifipass");
-          NVS.setString("stem_id", "");
-          stem_id = NVS.getString("stem_id");
-          NVS.setString("mqtt_addr", "");
-          mqtt_addr = NVS.getString("mqtt_addr");
-          NVS.setString("ok", "NO");
-          ok = NVS.getString("ok");
-          NVS.setString("stemfunction", "");
-          stemfunction = NVS.getString("stemfunction");
-          WiFi.disconnect();
-          ESP.restart();
-}
+
 
 uint8_t cnt =0;
 void setup() {
+  pinMode(sensorPin, OUTPUT);
+  pinMode(resetPin, INPUT);
   kickstart(); // just as greenHost
   Serial.printf("%d %d %d %d\n", mqtt_ip[0], mqtt_ip[1], mqtt_ip[2], mqtt_ip[3]);
-  pinMode(sensorPin, OUTPUT);
+  
 }
 
 void loop() {
@@ -197,7 +220,7 @@ void loop() {
   
   delay(200);
 }
-  if(!client.connected()) {
+  if(!client.connected() && NVS.getString("ok") == "YES") {
             reconnect();
           }
           client.loop();
@@ -214,8 +237,14 @@ void loop() {
                 snprintf(mqtt_msg, sizeof(mqtt_msg), "%s:%0.1fC%d", stem_id.c_str(), t, (int) h);
               }
               
+            } else if(stemfunction == "light") {
+              int lightState = digitalRead(sensorPin);
+              snprintf(mqtt_msg, sizeof(mqtt_msg), "%s:%dL", stem_id.c_str(), lightState);
             }
             
             client.publish("/greenHouseComm", mqtt_msg);
+          }
+          if(digitalRead(resetPin) == HIGH) {
+            reset_nvs();
           }
 }

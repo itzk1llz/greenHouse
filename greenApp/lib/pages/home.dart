@@ -88,7 +88,7 @@ class _HomePageState extends State<HomePage> {
       if(snapshot.connectionState == ConnectionState.waiting) {
         return Center(child: CircularProgressIndicator());
       } else if(snapshot.hasError) {
-        return Center(child: Text('Error: ${snapshot.error}'));
+        return Center(child: Text('No stems paired.'));
       } else if(snapshot.data != null && snapshot.data!.isNotEmpty) {
         return Container (
             child: GridView.builder(
@@ -135,8 +135,6 @@ class _HomePageState extends State<HomePage> {
       actions: [
         GestureDetector(
           onTap: () {
-            // TODO: add functionality so it can add stems
-            print("bogdanmateicostin");
             openModal(context);
           },
           child: Container(
