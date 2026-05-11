@@ -105,11 +105,9 @@ class _StemState extends State<Stem> {
   Future<void> fetchSensorData(String stem_id) async {
     try {
       String url = "http://${dotenv.get("GH_ADDR")}:${dotenv.get("GH_PORT")}/getstemval?stemid=$stem_id";
-      print("Constructed URL: $url");
-      print("GH_ADDR: ${dotenv.get("GH_ADDR")}, GH_PORT: ${dotenv.get("GH_PORT")}");
-      final response = await http.get(Uri.parse(url));
-      print("API Response Status: ${response.statusCode}");
-      print("API Response Body: ${response.body}");
+      
+      final response = await http.post(Uri.parse(url));
+      
 
       if (response.statusCode == 200) {
         var data = jsonDecode(response.body);
@@ -120,12 +118,11 @@ class _StemState extends State<Stem> {
           if(rawVal.contains("C")) {
             List<String> parts = rawVal.split('C');
             temp_val = parts[0] + "°C";
-            hum_val = parts.length > 2 ? parts[2] + "%" : "?";
+            hum_val = parts[1] + "%";
             print("Parsed - Temp: $temp_val, Humidity: $hum_val");
           } else {
             temp_val = rawVal;
             hum_val = "-";
-            print("No 'C' found - Raw value: $rawVal");
           }
         });
       } else {
